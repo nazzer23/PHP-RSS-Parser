@@ -3,33 +3,40 @@
 namespace Nazzer\PhpRssParser;
 
 use Nazzer\PhpRssParser\Enums\FeedType;
-use Nazzer\PhpRssParser\Interfaces\FeedParserImpl;
+use Nazzer\PhpRssParser\Objects\FeedChannel;
+use Nazzer\PhpRssParser\Parsers\AtomParser;
+use Nazzer\PhpRssParser\Parsers\PodcastParser;
+use Nazzer\PhpRssParser\Parsers\Rss2Parser;
+use SimpleXMLElement;
 
 class RssFeed
 {
     private FeedType $feedType;
-    private ?FeedParserImpl $feedParser;
+    private SimpleXMLElement $oXml;
 
-    public function __construct(FeedType $feedType, \SimpleXMLElement $xml)
+    public function __construct(FeedType $feedType, SimpleXMLElement $xml)
     {
         $this->feedType = $feedType;
-
-        $this->populateContents($xml);
+        $this->oXml = $xml;
     }
 
-    private function populateContents(\SimpleXMLElement $xml)
+    public function getFeedType(): FeedType
+    {
+        return $this->feedType;
+    }
+
+    public function getFeed(): ?FeedChannel
     {
         // Determine which Parser to use
-        $this->feedParser = match ($this->feedType) {
-
+        $feedParser = match ($this->feedType) {
+            FeedType::ATOM => new AtomParser,
+            FeedType::RSS => new Rss2Parser,
+            FeedType::PODCAST => new PodcastParser,
             default => null,
         };
 
-        if (!isset($this->feedParser)) {
-            return;
-        }
+        return $feedParser?->parse($this->oXml);
 
-        $this->feedParser->parse($xml);
     }
 
     public static function parse(string $sFeed): ?RssFeed
@@ -50,7 +57,7 @@ class RssFeed
         return new self($oFeedType, $oSimpleXml);
     }
 
-    private static function detectFeedType(\SimpleXMLElement $element): FeedType
+    private static function detectFeedType(SimpleXMLElement $element): FeedType
     {
         $sFirstElementName = $element->getName();
 
@@ -73,10 +80,4 @@ class RssFeed
 
         return FeedType::INVALID;
     }
-
-    public function getFeedType(): FeedType
-    {
-        return $this->feedType;
-    }
-
 }

@@ -1,6 +1,8 @@
 <?php
 
 use Nazzer\PhpRssParser\Enums\FeedType;
+use Nazzer\PhpRssParser\Objects\FeedChannel;
+use Nazzer\PhpRssParser\Objects\FeedEntry;
 use Nazzer\PhpRssParser\RssFeed;
 use PHPUnit\Framework\TestCase;
 
@@ -34,6 +36,20 @@ class RssParseTest extends TestCase
         $this->assertInstanceOf(RssFeed::class, $oFeed);
         $this->assertEquals(FeedType::RSS, $oFeed->getFeedType());
 
+        $oFeedChannel = $oFeed->getFeed();
+
+        $this->assertInstanceOf(FeedChannel::class, $oFeedChannel);
+        $this->assertEquals("Minimal Blog Feed", $oFeedChannel->getTitle());
+        $this->assertEquals("A simple example of an RSS 2.0 feed.", $oFeedChannel->getDescription());
+        $this->assertEquals('https://example.com', $oFeedChannel->getLink());
+
+        $oEntry = $oFeedChannel->getEntries()->current();
+        $this->assertInstanceOf(FeedEntry::class, $oEntry);
+        $this->assertEquals("First Post", $oEntry->getTitle());
+        $this->assertEquals("https://example.com/first-post", $oEntry->getLink());
+        $this->assertEquals("This is the description of the first post.", $oEntry->getDescription());
+        $this->assertEquals('https://example.com/first-post', $oEntry->getGuid());
+        $this->assertEquals("Mon, 06 Jan 2025 09:00:00 GMT", $oEntry->getDatePublished()?->format('D, d M Y H:i:s T'));
     }
 
     public function testAtomParse(): void
@@ -63,12 +79,27 @@ class RssParseTest extends TestCase
 
                 XML;
 
-        RssFeed::parse($sFeed);
         $oFeed = RssFeed::parse($sFeed);
 
         $this->assertInstanceOf(RssFeed::class, $oFeed);
         $this->assertEquals(FeedType::ATOM, $oFeed->getFeedType());
 
+        $oFeedChannel = $oFeed->getFeed();
+
+        $this->assertInstanceOf(FeedChannel::class, $oFeedChannel);
+        $this->assertEquals("urn:uuid:60a76c80-d399-11d9-b93C-0003939e0af6", $oFeedChannel->getId());
+        $this->assertEquals("Example Atom Feed", $oFeedChannel->getTitle());
+        $this->assertEquals('http://example.org/', $oFeedChannel->getLink());
+        $this->assertEquals("2025-01-16T18:30:02Z", $oFeedChannel->getDateUpdated()?->format('Y-m-d\TH:i:sp'));
+
+
+        $oEntry = $oFeedChannel->getEntries()->current();
+        $this->assertInstanceOf(FeedEntry::class, $oEntry);
+        $this->assertEquals("Atom-Powered Robots Run Amok", $oEntry->getTitle());
+        $this->assertEquals("http://example.org/2025/01/16/atom03", $oEntry->getLink());
+        $this->assertEquals("Some text.", $oEntry->getDescription());
+        $this->assertEquals('urn:uuid:1225c695-cfb8-4ebb-aaaa-80da344efa6a', $oEntry->getGuid());
+        $this->assertEquals("2025-01-16T18:30:02Z", $oEntry->getDateUpdated()?->format('Y-m-d\TH:i:sp'));
     }
 
     public function testPodcastParse(): void
